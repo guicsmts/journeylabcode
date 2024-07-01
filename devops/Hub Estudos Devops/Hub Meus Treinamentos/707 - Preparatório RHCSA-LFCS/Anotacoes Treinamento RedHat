@@ -1,0 +1,123 @@
+# Anotacoes treinamento RedHat
+ls /dev/tty*                # exibe todos os terminais interativos do linux
+                            # tty1-6 terminais de modo texto
+                            # tty7-64 terminais graficos
+
+# Tipos de usuarios no linux
+usuarios comuns 
+usuarios do sistema
+usuarios administrativos = id 0
+
+
+# Atalhos teclados
+ctrl + a    - inicia o cursos para o comeco do comandos
+ctrl + e    - inicia o cursos para o final do comando
+ctrl + u    - apaga toda as informacoes a esquerda
+ctrl + l    - limpa a tela
+ctrl + r    - research command
+
+
+set -o noclobber        # nao permiti redirecionar informacoes atraves da saida padrao
+set +o noclobber        # habilita redirecionamento atraves da saida padrao
+
+# saidas padroes
+0 - saida padrao stdin
+1 - saida stdout
+2 - saida stderror
+
+# redirecionadores de entrada
+estudos 
+https://learning.lpi.org/pt/learning-materials/010-160/3/3.2/3.2_01/#:~:text=Redirecionando%20a%20entrada%20padr%C3%A3o,Hello%20to%20you%20too!
+
+
+# comandos filtros
+# grep solicitacao ARQUIVO
+grep [string] ARQUIVO     # lista palavras do ARQUIVO
+grep -i [string] ARQUIVO  # lista palavras do ARQUIVO ignorando case sensitive
+grep -i ^[string] ARQUIVO # lista palavra que esteja no inicio das linhas de ARQUIVO
+grep -i [a-z A-Z] ARQUIVO
+grep -l [string] ./*      # busca dentro de todo sistemas de arquivos evidencia string 
+
+# comando para impacotar
+# impacotar é o processo de juntar em um unico lugar
+# tar -cprtvxjzfc
+tar -j = bzip2
+tar -z = gzip gunzip ungzip
+tar -cvf arquivo.tar /home/usuario/     # compacta conteudo do diretorio dentro do arquivo.tar
+tar -tvf arquivo.tar                    # visualiza conteudo do arquivo compactado
+
+# comando star impacotando
+star -cv f=arquivo.star /home/usuario/
+star -xv f=/home/usuario.star
+star -tv f=usuario.star 
+
+# criacao de arquivos
+toutch -am          # modifica macfile de um arquivo
+vim                 # cria um arquivo com vim
+>                   # cria um arquivo com expresao em bash
+
+# reagendamento de processos
+chrt -p [pid]       # exibe algoritmo utilizado neste processo
+chrt -f  -p [prioridade] [pid]  # modifica algoritmo de prioridade de um processo
+chrt -i -p [] [pid]             # modifica algoritmo de prioridade de um processo
+
+
+# pacote para gerenciar perfil de ajustes
+# tuned
+tuned-adm list
+tuned-adm recomend
+tuned-adm profile [perfil-ops]
+
+
+# leitura dos logs
+# /etc/rsyslog.conf
+facilidade.nivel destino
+ftp.informacoes  /var/log/ftpd
+apache.erro      /var/log/apache2
+ssh.informacoes /var/log/sshd
+authpriv.informacoes /var/log/secure
+
+# logs do journalctl
+journalctl systemd status
+journalctl --since "xxxx/xx/xx xx:xx"
+/etc/systemd/journal.conf
+
+
+# comando extra para estudo
+mncli
+getfacl
+
+# exibe servicos existentes
+systemctl -t service
+
+# copiar arquivo sftp
+sftp -h   # solicita help do comando
+sftp login@192.168.0.0 # conecta host remoto sftp
+get nome_arquivo.txt
+
+
+# lvm criar sistemas de arquivos 
+PV - PSYCAL VOLUME LVM - Hard disk fisico
+VG - VOLUME GROUPS
+LV - LOGICAL VOLUME
+fdisk -l # lista sistema de arquivos
+/dev/sda
+/dev/sd*
+fdisk /dev/sdb
+pvcreate # cria um disco fisico
+pvdisplay # lista todos os volumes criados
+pvs # lista resumida dos discos fisicos
+pvremove /dev/sdb # remove um volume fisico
+
+vgcreate dados-nome-volume /dev/sdb
+vgdisplay # verifica todos os volumes grups
+
+
+lvcreate -L 30G -n nome-volume-logico dados-nome-volume
+lvdisplay 
+
+# redes redhat 
+ipcalc # calculo de subrede
+mncli # gerencia networking
+nmtui # gerencia networking através do terminal
+

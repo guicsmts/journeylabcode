@@ -1,0 +1,121 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CD Build React Native Android
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the monitora/develop branch 
+  push:
+    tags:
+      - 'v.0.0.0'
+    branches:
+      - branch-android-build
+
+#  # Allows you to run this workflow manually from the Actions tab
+#  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of $USER that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      # Runs add repository dependency project 
+      - name: Update-repository
+        run: sudo add-apt-repository ppa:openjdk-r/ppa
+
+      # Runs timezone so
+      - name: Set-timezone
+        uses: szenius/set-timezone@v1.0
+        with:
+          timezoneLinux: 'America/Sao_Paulo'
+          timezoneMacos: 'America/Sao_Paulo'
+
+      # Runs install dependency project
+      - name: Install-dependency
+        run: |
+          sudo apt-get update && sudo apt-get upgrade -y
+          sudo apt-get install openjdk-8-jdk cmake curl unzip ssh wget -y
+          sudo curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+          sudo apt-get install nodejs
+          sudo npm install --global yarn 
+          sudo wget -q https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip
+          sudo unzip sdk-tools-linux-4333796.zip
+          sudo rm -rf sdk-tools-linux-4333796.zip
+          sudo mv tools/ /home/runner/
+
+      # Runs config project
+      - name: Config Environment Project
+        run: |
+          sudo wget ${{ secrets.URL_CERTIFICATE }}
+          sudo mv 17e1c50ed4743b719065084a4c49f517b47d358c142514d96a6d7d328c72ed6e key-release.keystore
+          sudo mv leiturinha.keystore android/app/
+      #
+          sudo echo '# Build app' >> android/gradle.properties
+          sudo echo '# Build app' >> android/gradle.properties
+          sudo echo "MYAPP_RELEASE_STORE_FILE=${{ secrets.MYAPP_RELEASE_STORE_FILE }}" >> android/gradle.properties
+          sudo echo "MYAPP_RELEASE_KEY_ALIAS=${{ secrets.MYAPP_RELEASE_KEY_ALIAS }}" >> android/gradle.properties
+          sudo echo "MYAPP_RELEASE_STORE_PASSWORD=${{ secrets.MYAPP_RELEASE_STORE_PASSWORD }}" >> android/gradle.properties
+          sudo echo "MYAPP_RELEASE_KEY_PASSWORD=${{ secrets.MYAPP_RELEASE_KEY_PASSWORD }}" >> android/gradle.properties
+      # 
+          sudo echo 'export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64' >> $HOME/.bashrc
+          sudo echo 'export ANDROID_HOME=$HOME/Android/Sdk' >> $HOME/.bashrc
+          sudo echo 'export PATH=$PATH:$ANDROID_HOME/emulator' >> $HOME/.bashrc
+          sudo echo 'export PATH=$PATH:$ANDROID_HOME/tools' >> $HOME/.bashrc
+          sudo echo 'export PATH=$PATH:$ANDROID_HOME/tools/bin' >> $HOME/.bashrc
+          sudo echo 'export PATH=$PATH:$ANDROID_HOME/platform-tools' >> $HOME/.bashrc
+          sudo echo 'export PATH=$PATH:$HOME/android-studio/bin' >> $HOME/.bashrc
+
+          sudo echo 'export NODE_OPTIONS=--max_old_space_size=8096' >> $HOME/.bashrc
+
+          sudo echo 'export JAVA_OPTS='-XX:+IgnoreUnrecognizedVMOptions --add-modules java.se.ee' >> $HOME/.bashrc
+          sudo echo 'export JAVA_OPTS='-XX:+IgnoreUnrecognizedVMOptions --add-modules java.xml.bind' >> $HOME/.bashrc
+          mkdir -p /home/runner/.ssh/ && touch /home/runner/.ssh/id_rsa && touch /home/runner/.ssh/id_rsa.pub
+       #
+
+          sudo echo 'sdk.dir = /home/runner/tools/' >> android/local.properties
+          sudo echo 'sdk.dir = /usr/lib/android-sdk' >> android/local.properties
+
+          sudo echo fs.inotify.max_user_watches=524288 | sudo tee -a /etc/sysctl.conf && sudo sysctl -p
+          source /home/runner/.bashrc
+
+      
+      - name: Release App
+        run: |
+          sudo rm -rf node_modules/
+          sudo yarn install 
+          sudo yarn release-apk 
+          sudo rm -rf android/app/my-release-key.keystore
+
+
+      # Runs Firebase Distribution group Apks
+      - name: upload artifact to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.2.1
+        with:
+          appId: ${{ secrets.RELEASE_ID_FIREBASE }}
+          token: ${{ secrets.RELEASE_TOKEN_FIREBASE }}
+          groups: |
+            developer
+            quality-assurance
+            workflows-homolog
+          file: android/app/build/outputs/apk/release/app-release.apk
+
+      # RUN COMMIT RELEASES REPOSITORY GITHUB
+      # RUN DELETE PROCESS  20/09      GITHUB
+      - name: Commit-files
+        run: |
+          sudo git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          sudo git config --local user.name "github-actions[bot]"
+          sudo git add releases/
+          sudo git commit -m "App v.$(date +%d%m%y).$(date +%H:%M)"
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.RELEASE_TOKEN_GIT }}
+          branch: branch-android-build
