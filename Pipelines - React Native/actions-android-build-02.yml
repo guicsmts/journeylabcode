@@ -1,0 +1,107 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CD - Builds Pipeline Android
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of $USER that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+
+
+      # Runs add repository dependency project Agro-App
+      - name: Update-repository
+        run: sudo add-apt-repository ppa:openjdk-r/ppa
+
+      # Runs timezone so
+      - name: Set Timezone
+        uses: szenius/set-timezone@v1.0
+        with:
+          timezoneLinux: 'America/Sao_Paulo'
+          timezoneMacos: 'America/Sao_Paulo'
+
+      # Runs install deppendency project
+      - name: Install Dependency
+        run: |
+          sudo apt-get update && sudo apt-get upgrade -y      
+          sudo apt-get install openjdk-8-jdk openjdk-8-jre cmake curl android-sdk unzip ssh wget -y > install.dump
+          sudo curl -sL https://deb.nodesource.com/setup_14.x | sudo -E bash -
+          sudo apt-get install nodejs >> install.dump
+          sudo npm install --global yarn >> install.dump
+          sudo wget -q https://dl.google.com/android/repository/sdk-tools-linux-4333796.zip
+          sudo unzip sdk-tools-linux-4333796.zip
+          sudo rm -rf sdk-tools-linux-4333796.zip
+          sudo rm -rf /usr/lib/android-sdk/tools
+          sudo mv tools/ /usr/lib/android-sdk/
+
+      # Runs confiig poject
+      - name: Config Environment Project
+        run: |
+          sudo echo 'export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64' >> /home/runner/.bashrc
+          sudo echo 'export ANDROID_HOME=/usr/lib/android-sdk/' >> /home/runner/.bashrc
+          sudo echo 'export PATH=$PATH:$ANDROID_HOME/emulator' >> /home/runner/.bashrc
+          sudo echo 'export PATH=$PATH:$ANDROID_HOME/tools' >> /home/runner/.bashrc
+          sudo echo 'export PATH=$PATH:$ANDROID_HOME/tools/bin' >> /home/runner/.bashrc
+          sudo echo 'export PATH=$PATH:$ANDROID_HOME/platform-tools' >> /home/runner/.bashrc
+          sudo echo 'export PATH=$PATH:$HOME/android-studio/bin' >> /home/runner/.bashrc              
+          sudo echo '#' >> /home/runner/.bashrc
+          sudo echo '#' >> /home/runner/.bashrc          
+          sudo echo 'export JAVA_OPTS='-XX:+IgnoreUnrecognizedVMOptions --add-modules java.se.ee'' >> /home/runner/.bashrc
+          sudo echo 'export JAVA_OPTS='-XX:+IgnoreUnrecognizedVMOptions --add-modules java.xml.bind'' >> $HOME/.bashrc
+          source /home/runner/.bashrc
+
+      # Runs config project
+      - name: Config Signature 
+        run: |
+          sudo keytool -genkey -dname "CN=app-cn, OU=app, O=app, L=app, ST=app, C=SP" -keystore app.keystore -storepass android -alias app -keyalg RSA -keysize 4096 -validity 10000 -v && sudo keytool -list -v -keystore app.keystore -alias app -storepass android -keypass android
+          sudo echo '# Build Agro-App-app' >> android/gradle.properties
+          sudo echo '# Build Agro-App-app' >> android/gradle.properties
+          sudo echo "MYAPP_RELEASE_STORE_FILE=${{ secrets.MYAPP_RELEASE_STORE_FILE }}" >> android/gradle.properties
+          sudo echo "MYAPP_RELEASE_KEY_ALIAS=${{ secrets.MYAPP_RELEASE_KEY_ALIAS }}" >> android/gradle.properties
+          sudo echo "MYAPP_RELEASE_STORE_PASSWORD=${{ secrets.MYAPP_RELEASE_STORE_PASSWORD }}" >> android/gradle.properties
+          sudo echo "MYAPP_RELEASE_KEY_PASSWORD=${{ secrets.MYAPP_RELEASE_KEY_PASSWORD }}" >> android/gradle.properties          
+          sudo mv app.keystore android/app/ 
+
+      # Runs confiig project
+      - name: Set Sdkirectory
+        run: |
+          sudo echo 'sdk.dir = /usr/lib/android-sdk/' >> android/app/local.properties
+          sudo echo 'sdk.dir = /usr/lib/android-sdk/tools/' >> android/app/local.properties
+          
+
+      - name: Release Agro App
+        run: |
+          sudo rm -rf node_modules/
+          sudo yarn install && sudo npm install
+          sudo rm -rf node_modules/
+          sudo yarn install
+          sudo yarn link
+          sudo yarn release-apk
+          sudo rm -rf android/app/my-release-key.keystore
+
+      # Runs Firebase Distribution group Apks
+      - name: upload artifact to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1.2.1
+        with:
+          appId: ${{ secrets.RELEASE_ID_FIREBASE }}
+          token: ${{ secrets.RELEASE_TOKEN_FIREBASE }}
+          groups: |
+            QA
+          file: android/app/build/outputs/apk/release/app-release.apk
